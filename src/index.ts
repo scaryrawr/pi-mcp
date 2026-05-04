@@ -100,7 +100,12 @@ async function connect(
       // todo: Process rest of the entry config
     });
   } else {
-    transport = new StdioClientTransport({ ...entry, cwd });
+    transport = new StdioClientTransport({
+      ...entry,
+      cwd,
+      // TODO: handle stderr output (e.g. log it) instead of ignoring
+      stderr: "ignore",
+    });
   }
 
   try {
@@ -198,7 +203,15 @@ async function registerMcps(pi: ExtensionAPI, connections: McpConnection[]) {
  */
 async function loadMcpConfig(cwd: string): Promise<Record<string, ResolvedMcpEntry>> {
   const mcpConfig: Record<string, ResolvedMcpEntry> = {};
-  const configDirs = Array.from(new Set([getAgentDir(), cwd]));
+
+  // Collect config directories: agent dir, cwd, and optional env-var directories
+  const configDirs = Array.from(
+    new Set([
+      getAgentDir(),
+      cwd,
+      ...(process.env.PI_MCP_CONFIG_DIRS?.split(",").filter((d) => d.trim()) ?? []),
+    ]),
+  );
 
   for (const configDir of configDirs) {
     try {
