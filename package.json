@@ -1,0 +1,34 @@
+{
+  "name": "pi-mcp",
+  "version": "1.0.0",
+  "description": "mcp client for pi",
+  "license": "MIT",
+  "author": "Mike Wallio",
+  "type": "module",
+  "scripts": {
+    "build": "tsgo -p ./tsconfig.json",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint -c .oxlintrc.json --tsconfig ./tsconfig.json src/index.ts",
+    "lint:fix": "oxlint -c .oxlintrc.json --fix --tsconfig ./tsconfig.json src/index.ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "^4.1.1",
+    "@modelcontextprotocol/client": "^2.0.0-alpha.2",
+    "typebox": "^1.1.37"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.70.6",
+    "@typescript/native-preview": "^7.0.0-dev.20260428.1",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.62.0",
+    "oxlint-tsgolint": "^0.22.1",
+    "vitest": "^4.1.5"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}
