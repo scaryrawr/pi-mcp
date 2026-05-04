@@ -34,8 +34,13 @@ Tools are configured via `.mcp.json` files. Two locations are supported (project
 ```json
 {
   "chrome-devtools": {
-    "type": "http",
-    "url": "http://127.0.0.1:9222"
+    "command": "npx",
+    "args": [
+      "chrome-devtools-mcp@latest",
+      "--no-usage-statistics",
+      "--no-performance-crux",
+      "--browser-url=http://127.0.0.1:9222"
+    ]
   }
 }
 ```
