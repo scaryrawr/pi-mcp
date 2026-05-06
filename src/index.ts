@@ -1,8 +1,12 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 
 import { Type, type Static } from "@mariozechner/pi-ai";
-import { type ExtensionAPI, getAgentDir } from "@mariozechner/pi-coding-agent";
+import {
+  type ExtensionAPI,
+  type ExtensionContext,
+  getAgentDir,
+} from "@mariozechner/pi-coding-agent";
 import type { Tool } from "@modelcontextprotocol/client";
 import {
   Client,
@@ -61,8 +65,6 @@ type McpEntry = McpConfig[string];
 type ResolvedMcpEntry = {
   /** Original config entry for this server */
   entry: McpEntry;
-  /** Directory containing the `.mcp.json` file this entry came from */
-  cwd: string;
 };
 
 /** Represents an active MCP server connection, including its transport and config. */
@@ -89,8 +91,9 @@ const MCP_CONFIG_FILE = ".mcp.json";
 async function connect(
   resolvedEntry: ResolvedMcpEntry,
   name: string,
+  cwd: string,
 ): Promise<McpConnection | undefined> {
-  const { entry, cwd } = resolvedEntry;
+  const { entry } = resolvedEntry;
   const client = new Client({ name: `pi-mcp-${name}`, version: "1.0.0" });
   let transport: Transport;
 
@@ -196,32 +199,64 @@ async function registerMcps(pi: ExtensionAPI, connections: McpConnection[]) {
   }
 }
 
+async function isConfigFile(option: string | undefined): Promise<boolean> {
+  if (!option) return false;
+  try {
+    const stats = await stat(option);
+    return stats.isFile();
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Reads MCP config from the global agent dir and the current pi session cwd.
  * Project config overrides global config for servers with the same name.
- * @param cwd - The current pi session working directory.
+ * @param pi - The pi ExtensionAPI instance.
+ * @param ctx - The extension context
  */
-async function loadMcpConfig(cwd: string): Promise<Record<string, ResolvedMcpEntry>> {
+async function loadMcpConfig(
+  pi: ExtensionAPI,
+  ctx: ExtensionContext,
+): Promise<Record<string, ResolvedMcpEntry>> {
   const mcpConfig: Record<string, ResolvedMcpEntry> = {};
 
   // Collect config directories: agent dir, cwd, and optional env-var directories
   const configDirs = Array.from(
     new Set([
       getAgentDir(),
-      cwd,
+      ctx.cwd,
       ...(process.env.PI_MCP_CONFIG_DIRS?.split(",").filter((d) => d.trim()) ?? []),
     ]),
   );
 
-  for (const configDir of configDirs) {
+  const mcpOption = pi.getFlag("mcp") as string | undefined;
+  const isFileOption = await isConfigFile(mcpOption);
+  const files = configDirs.map((dir) => path.join(dir, MCP_CONFIG_FILE));
+  if (isFileOption && mcpOption) {
+    files.push(mcpOption);
+  }
+
+  for (const file of files) {
     try {
-      const config = await readFile(path.join(configDir, MCP_CONFIG_FILE), "utf-8");
+      const config = await readFile(file, "utf-8");
       const parsed = McpSchema.Parse(JSON.parse(config));
       for (const [name, entry] of Object.entries(parsed)) {
-        mcpConfig[name] = { entry, cwd: configDir };
+        mcpConfig[name] = { entry };
       }
     } catch {
-      // Ignore errors on MCP load failures
+      continue;
+    }
+  }
+
+  if (!isFileOption && mcpOption) {
+    try {
+      const parsed = McpSchema.Parse(JSON.parse(mcpOption));
+      for (const [name, entry] of Object.entries(parsed)) {
+        mcpConfig[name] = { entry };
+      }
+    } catch {
+      // no-op
     }
   }
 
@@ -252,9 +287,11 @@ async function closeMcps(connections: McpConnection[]) {
 export default function (pi: ExtensionAPI) {
   let connections: McpConnection[] = [];
   pi.on("session_start", async (_event, ctx) => {
-    const mcpConfig = await loadMcpConfig(ctx.cwd);
+    const mcpConfig = await loadMcpConfig(pi, ctx);
     connections = (
-      await Promise.all(Object.entries(mcpConfig).map(([name, entry]) => connect(entry, name)))
+      await Promise.all(
+        Object.entries(mcpConfig).map(([name, entry]) => connect(entry, name, ctx.cwd)),
+      )
     ).filter(isDefined);
     await registerMcps(pi, connections);
   });
@@ -262,5 +299,10 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     await closeMcps(connections);
     connections = [];
+  });
+
+  pi.registerFlag("mcp", {
+    description: "Add an mcp configuration JSON config or file path",
+    type: "string",
   });
 }
