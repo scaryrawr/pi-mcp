@@ -251,27 +251,16 @@ async function closeMcps(connections: McpConnection[]) {
  */
 export default function (pi: ExtensionAPI) {
   let connections: McpConnection[] = [];
-  let initialized = false;
-
   pi.on("session_start", async (_event, ctx) => {
-    if (initialized) return;
-    initialized = true;
-
     const mcpConfig = await loadMcpConfig(ctx.cwd);
     connections = (
-      await Promise.all(
-        Object.entries(mcpConfig).map(([name, entry]) => {
-          return connect(entry, name);
-        }),
-      )
+      await Promise.all(Object.entries(mcpConfig).map(([name, entry]) => connect(entry, name)))
     ).filter(isDefined);
-
     await registerMcps(pi, connections);
   });
 
   pi.on("session_shutdown", async () => {
     await closeMcps(connections);
     connections = [];
-    initialized = false;
   });
 }
