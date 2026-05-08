@@ -1,12 +1,12 @@
 import { readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 
-import { Type, type Static } from "@mariozechner/pi-ai";
+import { Type, type Static } from "@earendil-works/pi-ai";
 import {
   type ExtensionAPI,
   type ExtensionContext,
   getAgentDir,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import type { Tool } from "@modelcontextprotocol/client";
 import {
   Client,
