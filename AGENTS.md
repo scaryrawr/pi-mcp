@@ -1,31 +1,48 @@
-# pi-mcp
+# pi-mcp Repository Guidelines
 
-MCP client extension for pi (the AI coding agent). Reads `.mcp.json` config, connects to MCP servers (stdio or HTTP), and registers available tools with pi.
+## Project Structure & Module Organization
 
-## Validation
+This ESM TypeScript extension connects pi to MCP servers. `src/index.ts` is the
+extension factory: it owns session lifecycle, registers the `--mcp` flag, and
+coordinates the other modules. Keep MCP configuration loading and validation in
+`src/mcp-config.ts`, stdio/HTTP connection lifecycle in `src/mcp-clients.ts`,
+lazy discovery and pi tool registration in `src/mcp-tool-discovery.ts`, and
+shared transport/configuration types in `src/mcp-types.ts`.
+
+Configuration is merged in precedence order from the pi agent directory, the
+session cwd, `PI_MCP_CONFIG_DIRS` (comma-separated), and `--mcp` JSON or file.
+Server names become tool prefixes (for example, `server_toolName`). The
+extension deliberately tolerates invalid or unavailable MCP configuration so it
+does not prevent pi from starting; retain that behavior at these boundaries.
+
+## Build, Test, and Development Commands
 
 ```bash
-npm run build   # tsgo -p ./tsconfig.json
-npm run lint    # oxlint
-npm run fmt     # oxfmt (format)
-npm run test    # vitest
+npm run lint       # Fast type-aware oxlint check for src/
+npm run build      # Strict tsgo type check; emits no files
+npm run test       # Vitest suite
+npm run fmt:check  # Verify oxfmt output
+npm run fmt        # Format before committing
 ```
 
-Run `npm run fmt` before committing. Prefer `npm run lint` for quick checks; `npm run build` for full validation.
+For source changes, run `npm run build && npm run lint && npm run test`.
+There is currently no narrower test command or CI workflow; add focused Vitest
+coverage with new behavior where practical.
 
-## Architecture
+## Coding Style & Naming Conventions
 
-- **Single entry point**: `src/index.ts` — the pi extension factory.
-- Reads `.mcp.json` from both agent directory and cwd, merging configs.
-- For each server entry: establishes a connection (stdio or HTTP), fetches available tools, and registers them with pi.
-- Tools are prefixed with the server name (e.g., `server_toolName`).
+Use strict TypeScript and ESM `.js` relative import specifiers. The compiler
+enforces `verbatimModuleSyntax`, exact optional properties, and unchecked-index
+safety; use `import type` for type-only imports. Prefer named imports and
+exports; the extension factory in `src/index.ts` is the intentional default
+export. Define external tool/config schemas with TypeBox and compile validators
+before parsing untrusted config. Use `isDefined<T>` when filtering optional
+async results rather than assertions or casts. `oxfmt` sorts imports, and
+oxlint rejects explicit `any` and unused variables.
 
-## Conventions
+## Testing & Contribution Guidelines
 
-- **TypeScript**: Strict mode, `verbatimModuleSyntax`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, `noUncheckedSideEffectImports`.
-- **TypeBox** (`@cfworker/json-schema` + `typebox`) for schema definition and compilation.
-- **Named exports only** — no default imports; use `import { X } from "Y"`.
-- **Tool registration**: wrap each call to `pi.registerTool` with a clear async `execute` function that forwards to `client.callTool`.
-- **Type guards**: use `isDefined<T>` for narrowing `undefined` from async operations.
-- **Error handling**: silently swallow config parse errors (agent should never fail to load).
-- **ESM only** — `"type": "module"` in package.json.
+Preserve tool registration semantics: dynamically loaded tools must be tracked
+so session shutdown removes only tools added by this extension. Update README
+configuration examples when accepted MCP sources or transport fields change.
+Use concise imperative commit subjects, consistent with repository history.
