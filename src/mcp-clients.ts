@@ -34,7 +34,22 @@ export async function connectMcp(
 
     const options: StreamableHTTPClientTransportOptions = {};
 
-    if (entry.headers) options.requestInit = { headers: entry.headers };
+    // SDK-generated HTTP/MCP/auth headers take precedence over configured ones.
+    // Never forward configured headers across origins via an automatic redirect.
+    if (entry.headers) {
+      const headers = Object.fromEntries(
+        Object.entries(entry.headers).filter(([key]) => {
+          const name = key.toLowerCase();
+
+          return (
+            !["accept", "content-type", "mcp-session-id", "mcp-protocol-version"].includes(name) &&
+            !(provider && name === "authorization")
+          );
+        }),
+      );
+
+      options.requestInit = { headers, redirect: "manual" };
+    }
 
     if (provider) options.authProvider = provider;
 
@@ -42,7 +57,7 @@ export async function connectMcp(
   } else {
     transport = new StdioClientTransport({
       ...entry,
-      cwd,
+      cwd: entry.cwd ?? cwd,
       // TODO: handle stderr output (e.g. log it) instead of ignoring.
       stderr: "ignore",
     });

@@ -90,6 +90,50 @@ describe("MCP connections", () => {
     });
   });
 
+  it("does not forward configured headers through a cross-origin redirect", async () => {
+    const received: string[] = [];
+
+    const target = createServer((request, response) => {
+      received.push(request.headers.authorization ?? "");
+      response.writeHead(405).end();
+    });
+
+    await new Promise<void>((resolve) => target.listen(0, "127.0.0.1", resolve));
+    // SAFETY: Both fixtures listen on TCP ports.
+    const targetPort = (target.address() as AddressInfo).port;
+
+    const redirect = createServer((_request, response) => {
+      response.writeHead(307, { location: `http://127.0.0.1:${targetPort}/mcp` }).end();
+    });
+
+    await new Promise<void>((resolve) => redirect.listen(0, "127.0.0.1", resolve));
+
+    try {
+      // SAFETY: The fixture listens on a TCP port.
+      const port = (redirect.address() as AddressInfo).port;
+
+      const connection = await connectMcp(
+        {
+          type: "http",
+          url: `http://127.0.0.1:${port}/mcp`,
+          headers: { Authorization: "Bearer secret" },
+        },
+        "redirect",
+        process.cwd(),
+      );
+
+      expect(connection).toBeUndefined();
+      expect(received).toEqual([]);
+    } finally {
+      redirect.closeAllConnections();
+      target.closeAllConnections();
+      await Promise.all([
+        new Promise<void>((resolve) => redirect.close(() => resolve())),
+        new Promise<void>((resolve) => target.close(() => resolve())),
+      ]);
+    }
+  });
+
   it("does not prevent startup when a local server cannot be spawned", async () => {
     const result = await connectMcp(
       { command: "pi-mcp-nonexistent-server-command", args: [] },

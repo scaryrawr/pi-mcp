@@ -21,6 +21,7 @@ const mcpEntrySchema = Type.Union([
     command: Type.String(),
     args: Type.Array(Type.String()),
     env: Type.Optional(Type.Record(Type.String(), Type.String())),
+    cwd: Type.Optional(Type.String()),
     tools: Type.Optional(Type.Array(Type.String())),
   }),
   Type.Object({

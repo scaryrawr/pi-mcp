@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import type { McpEntry } from "./mcp-types.js";
+import { loadPluginMcp } from "./plugin-mcp.js";
 
 /** Shared event-bus channel for adding MCP servers to pi-mcp. */
 export const REGISTER_MCP_SERVER = "pi-mcp:register";
@@ -24,6 +25,19 @@ export function registerMcpServer(
 
   pi.events.on(COLLECT_MCP_SERVERS, publish);
   publish();
+}
+
+/** Register the MCP components of an Agent Plugins v1 package through the event bus.
+ * The caller owns installation and supplies a stable per-installation data directory.
+ */
+export async function registerMcpPlugin(
+  pi: Pick<ExtensionAPI, "events">,
+  pluginRoot: string,
+  pluginData: string,
+): Promise<void> {
+  const servers = await loadPluginMcp(pluginRoot, pluginData);
+
+  for (const [name, entry] of servers) registerMcpServer(pi, name, entry);
 }
 
 export type { McpEntry } from "./mcp-types.js";

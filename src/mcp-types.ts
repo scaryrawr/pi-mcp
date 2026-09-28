@@ -10,6 +10,8 @@ export type LocalMcpEntry = {
   args: string[];
   /** Environment variables supplied to the server process. */
   env?: Record<string, string>;
+  /** Working directory (defaults to the session cwd). */
+  cwd?: string;
   /** Allowlist of tools the extension may expose. */
   tools?: string[];
 };

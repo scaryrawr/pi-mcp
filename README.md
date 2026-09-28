@@ -54,7 +54,7 @@ Server entries can be supplied as a flat map (as above), or nested under a top-l
 
 Each server entry supports:
 
-- **Local (stdio)**: `command`, `args`, optional `env` and `tools` filter
+- **Local (stdio)**: `command`, `args`, optional `env`, `cwd` and `tools` filter
 - **HTTP**: `type: "http"`, `url`, optional `headers`, `oauth`, and `tools` filter (uses Streamable HTTP; headers are sent with transport requests)
 
 ### HTTP OAuth
@@ -93,6 +93,20 @@ export default function (pi: ExtensionAPI) {
 ```
 
 The helper publishes on `pi-mcp:register` with `{ name, entry }` and replays the registration when pi-mcp emits `pi-mcp:collect`, so extension load order does not matter. Registrations received before session start override matching file/flag entries. New names received while a session is running connect immediately; an already connected server cannot be replaced until the next session because published tools cannot be removed. Invalid events and unavailable servers are ignored. Event registrations are retained for subsequent sessions in the same extension instance.
+
+### Agent Plugins v1 packages (event registration)
+
+An installer/loader for the [Agent Plugins 1.0.0 format](https://github.com/agentplugins/agent-plugins-spec/blob/main/spec/1.0.0.md) can register the MCP components of an installed plugin:
+
+```ts
+import { registerMcpPlugin } from "pi-mcp";
+
+// pluginRoot contains plugin.json and (optionally) mcp.json; pluginData is a
+// persistent, writable directory dedicated to this installed plugin instance.
+await registerMcpPlugin(pi, pluginRoot, pluginData);
+```
+
+The helper validates `plugin.json` and the fixed `mcp.json` location, then registers each valid server on the same replayable event channel as `registerMcpServer`. It prefixes server names with the manifest name (`my-plugin_server`). It supports portable `stdio` and `streamable-http`; legacy `sse` entries are skipped. It resolves contained plugin paths, sets `PLUGIN_ROOT` and `PLUGIN_DATA`, expands only the specified placeholders in stdio args/env/cwd, validates remote URLs and headers, and skips individual invalid servers without discarding their siblings. A missing `mcp.json` is fine. Invalid manifests reject the plugin; an invalid MCP component is ignored. The installer remains responsible for choosing a stable per-installation data path and discovering other component types (e.g. skills). This helper does not make native project/agent `mcp.json` files Agent Plugins packages: their existing formats and precedence remain unchanged. As with native event registrations, connected servers cannot be replaced until the next session.
 
 Tool filters constrain which tools pi-mcp publishes to `search_tools`. They can specify exact tool names, or use `"*"` to allow all tools. Combining `"*"` with specific names allows read-only tools plus the explicitly named ones.
 
