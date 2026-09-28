@@ -11,8 +11,8 @@ import { Compile } from "typebox/compile";
 
 import type { McpConfig, McpEntry } from "./mcp-types.js";
 
-/** Name of the MCP configuration file searched in each configuration directory. */
-const MCP_CONFIG_FILE = ".mcp.json";
+/** Configuration files in each directory, in ascending precedence order. */
+const MCP_CONFIG_FILES = ["mcp.json", ".mcp.json"];
 
 /** JSON Schema describing the supported MCP server transport configurations. */
 const mcpEntrySchema = Type.Union([
@@ -81,7 +81,10 @@ export async function loadMcpConfig(pi: ExtensionAPI, ctx: ExtensionContext): Pr
   // SAFETY: `mcp` is registered with `type: "string"` in this extension's registerFlag call, so its value is `string | undefined`.
   const mcpOption = pi.getFlag("mcp") as string | undefined;
   const isFileOption = await isConfigFile(mcpOption);
-  const files = configDirs.map((directory) => path.join(directory, MCP_CONFIG_FILE));
+
+  const files = configDirs.flatMap((directory) =>
+    MCP_CONFIG_FILES.map((filename) => path.join(directory, filename)),
+  );
 
   if (isFileOption && mcpOption) {
     files.push(mcpOption);

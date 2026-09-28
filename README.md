@@ -4,11 +4,11 @@ An MCP client extension for [pi](https://github.com/mariozechner/pi-coding-agent
 
 ## What it does
 
-The extension reads `.mcp.json` configuration files (from both the agent directory and project working directory) and accepts server registrations from other pi extensions. It establishes connections to MCP servers — either via stdio (local processes) or HTTP (remote endpoints). It lists allowed tools at session start and offers them to the shared `search_tools` registry, prefixed with the server name (e.g., `server_toolName`; punctuation in names becomes `_`). Only tools selected by a search become active.
+The extension reads `mcp.json` and `.mcp.json` configuration files (from both the agent directory and project working directory) and accepts server registrations from other pi extensions. It establishes connections to MCP servers — either via stdio (local processes) or HTTP (remote endpoints). It lists allowed tools at session start and offers them to the shared `search_tools` registry, prefixed with the server name (e.g., `server_toolName`; punctuation in names becomes `_`). Only tools selected by a search become active.
 
 ## How it works
 
-1. On session start, pi-mcp loads `.mcp.json` from the agent directory and project cwd (project config overrides global) and merges event registrations (which override file entries with the same name).
+1. On session start, pi-mcp loads `mcp.json` and `.mcp.json` from the agent directory and project cwd (project config overrides global) and merges event registrations (which override file entries with the same name).
 2. For each server entry, it establishes a connection via stdio or Streamable HTTP transport.
 3. It lists and filters tools from connected servers and publishes them to pi-dynamic-tools. A server that cannot list tools does not prevent other servers from working.
 4. Use `search_tools` with a tool name or capability query to activate matching tools (keyword search by default; semantic search is also available). Tool calls are forwarded to the connected MCP server and returned with content filtering (text and image only).
@@ -27,11 +27,11 @@ Both extensions must be loaded in pi. The `pi-dynamic-tools` dependency in pi-mc
 
 ## Configuration
 
-Tools are configured via `.mcp.json` files. Configuration is merged in this order (later entries with the same server name override earlier ones):
+Tools are configured via `mcp.json` or `.mcp.json` files. Configuration is merged in this order (later entries with the same server name override earlier ones):
 
-- `<pi agent directory>/.mcp.json` — global configuration
-- `<project>/.mcp.json` — project working directory
-- Directories in `PI_MCP_CONFIG_DIRS` (comma-separated), each with a `.mcp.json`
+- `<pi agent directory>/mcp.json`, then `.mcp.json` — global configuration
+- `<project>/mcp.json`, then `.mcp.json` — project working directory
+- Directories in `PI_MCP_CONFIG_DIRS` (comma-separated), each with `mcp.json`, then `.mcp.json`
 - `--mcp` with an inline JSON configuration or a file path
 
 ### Example
