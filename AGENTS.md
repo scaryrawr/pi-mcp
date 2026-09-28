@@ -5,8 +5,10 @@
 This ESM TypeScript extension connects pi to MCP servers. `src/index.ts` is the
 extension factory: it owns session lifecycle, registers the `--mcp` flag, and
 coordinates the other modules. Keep MCP configuration loading and validation in
-`src/mcp-config.ts`, stdio/HTTP connection lifecycle in `src/mcp-clients.ts`,
-tool listing, filtering, and publication to `pi-dynamic-tools` in
+`src/mcp-config.ts` for native files/flags and `src/plugin-mcp.ts` for portable
+Agent Plugins package validation and translation, stdio/HTTP connection
+lifecycle in `src/mcp-clients.ts`, tool listing, filtering, and publication to
+`pi-dynamic-tools` in
 `src/mcp-tool-discovery.ts`, the public event-registration helper in
 `src/register.ts`, and shared transport/configuration types in
 `src/mcp-types.ts`. Do not register MCP tools or a search tool directly with pi;
@@ -18,6 +20,11 @@ subpath for process transports; do not reintroduce the v1 SDK dependency.
 Configuration is merged in precedence order from the pi agent directory, the
 session cwd, `PI_MCP_CONFIG_DIRS` (comma-separated), `--mcp` JSON or file, and
 validated `pi-mcp:register` events (highest precedence at session start).
+File and flag JSON accept a flat server map or a map under `servers` or
+`mcpServers`; validate and unwrap each source before merging by server name.
+Agent Plugins v1 packages instead use `registerMcpPlugin`: validate root
+`plugin.json` and the fixed root `mcp.json`, map valid servers to native event
+registrations, and keep the portable format separate from native config files.
 `registerMcpServer` replays registrations on `pi-mcp:collect` for load-order
 independence; new names can connect mid-session, but already connected servers
 cannot be replaced until the next session because published tools cannot be
