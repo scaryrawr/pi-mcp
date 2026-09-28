@@ -5,6 +5,9 @@
   "license": "MIT",
   "author": "Mike Wallio",
   "type": "module",
+  "exports": {
+    ".": "./src/register.ts"
+  },
   "scripts": {
     "build": "tsgo -p ./tsconfig.json",
     "fmt": "oxfmt",

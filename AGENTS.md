@@ -6,8 +6,9 @@ This ESM TypeScript extension connects pi to MCP servers. `src/index.ts` is the
 extension factory: it owns session lifecycle, registers the `--mcp` flag, and
 coordinates the other modules. Keep MCP configuration loading and validation in
 `src/mcp-config.ts`, stdio/HTTP connection lifecycle in `src/mcp-clients.ts`,
-session-start tool listing, filtering, and publication to `pi-dynamic-tools` in
-`src/mcp-tool-discovery.ts`, and shared transport/configuration types in
+tool listing, filtering, and publication to `pi-dynamic-tools` in
+`src/mcp-tool-discovery.ts`, the public event-registration helper in
+`src/register.ts`, and shared transport/configuration types in
 `src/mcp-types.ts`. Do not register MCP tools or a search tool directly with pi;
 the separately installed `pi-dynamic-tools` extension owns search, activation,
 and session-scoped tool registration. Use the v2
@@ -15,8 +16,12 @@ and session-scoped tool registration. Use the v2
 subpath for process transports; do not reintroduce the v1 SDK dependency.
 
 Configuration is merged in precedence order from the pi agent directory, the
-session cwd, `PI_MCP_CONFIG_DIRS` (comma-separated), and `--mcp` JSON or file.
-Server names become tool prefixes (for example, `server_toolName`); MCP
+session cwd, `PI_MCP_CONFIG_DIRS` (comma-separated), `--mcp` JSON or file, and
+validated `pi-mcp:register` events (highest precedence at session start).
+`registerMcpServer` replays registrations on `pi-mcp:collect` for load-order
+independence; new names can connect mid-session, but already connected servers
+cannot be replaced until the next session because published tools cannot be
+removed. Server names become tool prefixes (for example, `server_toolName`); MCP
 identifiers are normalized to valid pi tool names before publication. The
 extension deliberately tolerates invalid or unavailable MCP configuration so it
 does not prevent pi from starting; retain that behavior at these boundaries.

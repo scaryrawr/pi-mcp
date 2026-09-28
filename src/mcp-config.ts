@@ -9,33 +9,47 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Compile } from "typebox/compile";
 
-import type { McpConfig } from "./mcp-types.js";
+import type { McpConfig, McpEntry } from "./mcp-types.js";
 
 /** Name of the MCP configuration file searched in each configuration directory. */
 const MCP_CONFIG_FILE = ".mcp.json";
 
 /** JSON Schema describing the supported MCP server transport configurations. */
-const mcpSchema = Type.Record(
-  Type.String(),
-  Type.Union([
-    Type.Object({
-      type: Type.Optional(Type.Literal("local")),
-      command: Type.String(),
-      args: Type.Array(Type.String()),
-      env: Type.Optional(Type.Record(Type.String(), Type.String())),
-      tools: Type.Optional(Type.Array(Type.String())),
-    }),
-    Type.Object({
-      type: Type.Literal("http"),
-      url: Type.String({ format: "uri" }),
-      headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-      tools: Type.Optional(Type.Array(Type.String())),
-    }),
-  ]),
+const mcpEntrySchema = Type.Union([
+  Type.Object({
+    type: Type.Optional(Type.Literal("local")),
+    command: Type.String(),
+    args: Type.Array(Type.String()),
+    env: Type.Optional(Type.Record(Type.String(), Type.String())),
+    tools: Type.Optional(Type.Array(Type.String())),
+  }),
+  Type.Object({
+    type: Type.Literal("http"),
+    url: Type.String({ format: "uri" }),
+    headers: Type.Optional(Type.Record(Type.String(), Type.String())),
+    tools: Type.Optional(Type.Array(Type.String())),
+  }),
+]);
+
+const mcpSchema = Type.Record(Type.String(), mcpEntrySchema);
+
+/** Compiled validators for file/flag configuration and event registrations. */
+const McpSchema = Compile(mcpSchema);
+
+const RegistrationSchema = Compile(
+  Type.Object({ name: Type.String({ minLength: 1 }), entry: mcpEntrySchema }),
 );
 
-/** Compiled validator for MCP configuration files and inline configuration. */
-const McpSchema = Compile(mcpSchema);
+/** Reject malformed event payloads without interrupting other extensions. */
+export function parseMcpRegistration(
+  data: Parameters<ExtensionAPI["events"]["emit"]>[1],
+): { name: string; entry: McpEntry } | undefined {
+  try {
+    return RegistrationSchema.Parse(data);
+  } catch {
+    return undefined;
+  }
+}
 
 /** Determines whether an --mcp value identifies an existing file. */
 async function isConfigFile(option: string | undefined): Promise<boolean> {
