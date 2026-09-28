@@ -50,6 +50,8 @@ Tools are configured via `mcp.json` or `.mcp.json` files. Configuration is merge
 }
 ```
 
+Server entries can be supplied as a flat map (as above), or nested under a top-level `servers` or `mcpServers` key. All three formats work in configuration files and with `--mcp` (inline JSON or a file path). For example, `{"mcpServers": {"my-server": {"command": "node", "args": ["server.js"]}}}` is equivalent to a flat map with `my-server` at the top level.
+
 Each server entry supports:
 
 - **Local (stdio)**: `command`, `args`, optional `env` and `tools` filter

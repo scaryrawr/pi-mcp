@@ -36,6 +36,21 @@ const mcpSchema = Type.Record(Type.String(), mcpEntrySchema);
 /** Compiled validators for file/flag configuration and event registrations. */
 const McpSchema = Compile(mcpSchema);
 
+const ServersSchema = Compile(Type.Object({ servers: mcpSchema }));
+
+const McpServersSchema = Compile(Type.Object({ mcpServers: mcpSchema }));
+
+/** Accept flat server maps and the two common wrapper formats. */
+function parseMcpConfig(json: string): McpConfig {
+  const data: unknown = JSON.parse(json);
+
+  if (McpSchema.Check(data)) return McpSchema.Parse(data);
+
+  if (ServersSchema.Check(data)) return ServersSchema.Parse(data).servers;
+
+  return McpServersSchema.Parse(data).mcpServers;
+}
+
 const RegistrationSchema = Compile(
   Type.Object({ name: Type.String({ minLength: 1 }), entry: mcpEntrySchema }),
 );
@@ -92,7 +107,7 @@ export async function loadMcpConfig(pi: ExtensionAPI, ctx: ExtensionContext): Pr
 
   for (const file of files) {
     try {
-      const parsed: McpConfig = McpSchema.Parse(JSON.parse(await readFile(file, "utf-8")));
+      const parsed = parseMcpConfig(await readFile(file, "utf-8"));
       Object.assign(mcpConfig, parsed);
     } catch {
       // Invalid or missing configuration must not prevent the extension loading.
@@ -101,7 +116,7 @@ export async function loadMcpConfig(pi: ExtensionAPI, ctx: ExtensionContext): Pr
 
   if (!isFileOption && mcpOption) {
     try {
-      const parsed: McpConfig = McpSchema.Parse(JSON.parse(mcpOption));
+      const parsed = parseMcpConfig(mcpOption);
       Object.assign(mcpConfig, parsed);
     } catch {
       // Invalid inline configuration must not prevent the extension loading.
