@@ -1,8 +1,8 @@
 import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { Tool } from "@modelcontextprotocol/client";
+import type { JSONObject, Tool } from "@modelcontextprotocol/client";
 
-import { getMcpToolMatches } from "./mcp-tool-matching.js";
+import { getMcpToolMatches, type McpToolSearchCandidate } from "./mcp-tool-matching.js";
 import type { DiscoveredTool, McpConnection } from "./mcp-types.js";
 
 const MCP_SEARCH_TOOL_NAME = "mcp_search_tools";
@@ -25,6 +25,7 @@ function filterTools(tools: Tool[], toolsFilter: string[] | undefined): Tool[] {
   const explicitTools = tools.filter((tool) => explicitToolNames.includes(tool.name));
   const explicitToolSet = new Set(explicitTools.map((tool) => tool.name));
   const readOnlyTools = tools.filter((tool) => tool.annotations?.readOnlyHint);
+
   return [...explicitTools, ...readOnlyTools.filter((tool) => !explicitToolSet.has(tool.name))];
 }
 
@@ -37,12 +38,14 @@ async function discoverMcpTools(connections: McpConnection[]): Promise<Discovere
       }
 
       const response = await connection.client.listTools();
+
       return filterTools(response.tools, connection.entry.tools).map((tool) => ({
         connection,
         tool,
       }));
     }),
   );
+
   return toolsByConnection.flat();
 }
 
@@ -54,20 +57,22 @@ function registerMcpTool(pi: ExtensionAPI, discoveredTool: DiscoveredTool): stri
     name,
     label: tool.name,
     description: tool.description || tool.name,
-    parameters: Type.Unsafe<Record<string, unknown>>(tool.inputSchema),
+    parameters: Type.Unsafe<JSONObject>(tool.inputSchema),
     async execute(_toolCallId, args, _signal, _onUpdate, _ctx) {
       const result = await connection.client.callTool({
         name: tool.name,
         arguments: args,
       });
+
       return {
         content: result.content.filter(
           (content) => content.type === "text" || content.type === "image",
         ),
-        details: (result._meta ?? {}) as Record<string, unknown>,
+        details: result._meta ?? {},
       };
     },
   });
+
   return name;
 }
 
@@ -93,6 +98,7 @@ export function registerMcpSearchTool(
     }),
     async execute(_toolCallId, { query }) {
       const normalizedQuery = query.trim().toLowerCase();
+
       if (!normalizedQuery) {
         return {
           content: [
@@ -103,23 +109,34 @@ export function registerMcpSearchTool(
       }
 
       const discoveredTools = await discoverMcpTools(getConnections());
+
       const discoveredToolsByName = new Map(
         discoveredTools.map((discoveredTool) => [
           `${discoveredTool.connection.name}_${discoveredTool.tool.name}`,
           discoveredTool,
         ]),
       );
+
       const matchingTools = getMcpToolMatches(
         normalizedQuery,
-        discoveredTools.map(({ connection, tool }) => ({
-          serverName: connection.name,
-          toolName: tool.name,
-          ...(tool.description ? { description: tool.description } : {}),
-        })),
+        discoveredTools.map(({ connection, tool }) => {
+          const candidate: McpToolSearchCandidate = {
+            serverName: connection.name,
+            toolName: tool.name,
+          };
+
+          if (tool.description !== undefined) {
+            candidate.description = tool.description;
+          }
+
+          return candidate;
+        }),
       ).flatMap((match) => {
         const discoveredTool = discoveredToolsByName.get(`${match.serverName}_${match.toolName}`);
+
         return discoveredTool ? [discoveredTool] : [];
       });
+
       if (matchingTools.length === 0) {
         return {
           content: [{ type: "text", text: `No MCP tools found matching "${query}".` }],
@@ -128,14 +145,19 @@ export function registerMcpSearchTool(
       }
 
       const activeTools = new Set(pi.getActiveTools());
+
       const loadedTools = matchingTools.map((discoveredTool) => {
         const name = `${discoveredTool.connection.name}_${discoveredTool.tool.name}`;
+
         if (!registeredToolNames.has(name)) {
           registeredToolNames.add(registerMcpTool(pi, discoveredTool));
         }
+
         activeTools.add(name);
+
         return `${name}: ${discoveredTool.tool.description || discoveredTool.tool.name}`;
       });
+
       pi.setActiveTools([...activeTools]);
 
       return {

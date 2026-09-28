@@ -55,6 +55,7 @@ async function isConfigFile(option: string | undefined): Promise<boolean> {
  */
 export async function loadMcpConfig(pi: ExtensionAPI, ctx: ExtensionContext): Promise<McpConfig> {
   const mcpConfig: McpConfig = {};
+
   const configDirs = Array.from(
     new Set([
       getAgentDir(),
@@ -62,6 +63,8 @@ export async function loadMcpConfig(pi: ExtensionAPI, ctx: ExtensionContext): Pr
       ...(process.env.PI_MCP_CONFIG_DIRS?.split(",").filter((directory) => directory.trim()) ?? []),
     ]),
   );
+
+  // SAFETY: `mcp` is registered with `type: "string"` in this extension's registerFlag call, so its value is `string | undefined`.
   const mcpOption = pi.getFlag("mcp") as string | undefined;
   const isFileOption = await isConfigFile(mcpOption);
   const files = configDirs.map((directory) => path.join(directory, MCP_CONFIG_FILE));

@@ -32,6 +32,7 @@ export async function connectMcp(
 
   try {
     await client.connect(transport);
+
     return { name, client, entry, transport };
   } catch {
     return undefined;

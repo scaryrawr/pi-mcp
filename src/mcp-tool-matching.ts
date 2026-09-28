@@ -19,6 +19,7 @@ function singularize(token: string): string {
   if (token.endsWith("ies") && token.length > 3) {
     return `${token.slice(0, -3)}y`;
   }
+
   if (
     token.endsWith("s") &&
     token.length > 3 &&
@@ -28,6 +29,7 @@ function singularize(token: string): string {
   ) {
     return token.slice(0, -1);
   }
+
   return token;
 }
 
@@ -37,8 +39,7 @@ function tokenize(value: string): string[] {
     .replaceAll(/([a-z\d])([A-Z])/g, "$1 $2")
     .toLowerCase()
     .split(/[^a-z\d]+/)
-    .filter(Boolean)
-    .map(singularize);
+    .flatMap((token) => (token ? [singularize(token)] : []));
 }
 
 /**
@@ -52,13 +53,15 @@ export function getMcpToolMatches(
   candidates: McpToolSearchCandidate[],
 ): McpToolMatch[] {
   const queryTokens = tokenize(query);
+
   if (queryTokens.length === 0) {
     return [];
   }
 
   const normalizedQuery = queryTokens.join(" ");
+
   return candidates
-    .map((candidate) => {
+    .flatMap((candidate): McpToolMatch[] => {
       const serverTokens = tokenize(candidate.serverName);
       const toolTokens = tokenize(candidate.toolName);
       const descriptionTokens = tokenize(candidate.description ?? "");
@@ -66,14 +69,14 @@ export function getMcpToolMatches(
       const searchableTokens = new Set([...identifierTokens, ...descriptionTokens]);
 
       if (!queryTokens.every((token) => searchableTokens.has(token))) {
-        return undefined;
+        return [];
       }
 
       const exact = normalizedQuery === [...serverTokens, ...toolTokens].join(" ");
       const identifierMatches = queryTokens.filter((token) => identifierTokens.has(token)).length;
       const score = (exact ? 100 : 0) + identifierMatches * 10 + queryTokens.length;
-      return { ...candidate, score };
+
+      return [{ ...candidate, score }];
     })
-    .filter((match): match is McpToolMatch => match !== undefined)
     .sort((left, right) => right.score - left.score);
 }
