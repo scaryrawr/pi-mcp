@@ -22,6 +22,15 @@ export type HttpMcpEntry = {
   url: string;
   /** HTTP headers supplied to the server. */
   headers?: Record<string, string>;
+  /** OAuth authorization-code (PKCE) for remote servers. */
+  oauth?: {
+    /** Pre-registered public client ID, if dynamic registration is unavailable. */
+    clientId?: string;
+    /** Hosted HTTPS client ID metadata document (if supported by the authorization server). */
+    clientMetadataUrl?: string;
+    /** Fixed loopback callback port (default 8765). Must match a pre-registered redirect URI. */
+    port?: number;
+  };
   /** Allowlist of tools the extension may expose. */
   tools?: string[];
 };

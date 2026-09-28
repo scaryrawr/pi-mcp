@@ -84,6 +84,7 @@ describe("MCP server registration", () => {
       // SAFETY: The test replaces this with lifecycle handler capture below.
       on: (() => () => {}) as ExtensionAPI["on"],
       registerFlag() {},
+      registerCommand() {},
       getFlag() {
         return undefined;
       },

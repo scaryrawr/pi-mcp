@@ -27,6 +27,13 @@ const mcpEntrySchema = Type.Union([
     type: Type.Literal("http"),
     url: Type.String({ format: "uri" }),
     headers: Type.Optional(Type.Record(Type.String(), Type.String())),
+    oauth: Type.Optional(
+      Type.Object({
+        clientId: Type.Optional(Type.String({ minLength: 1 })),
+        clientMetadataUrl: Type.Optional(Type.String({ format: "uri", pattern: "^https://" })),
+        port: Type.Optional(Type.Integer({ minimum: 1, maximum: 65535 })),
+      }),
+    ),
     tools: Type.Optional(Type.Array(Type.String())),
   }),
 ]);

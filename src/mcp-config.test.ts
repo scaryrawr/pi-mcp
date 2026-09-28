@@ -102,6 +102,27 @@ describe("MCP configuration files", () => {
     }
   });
 
+  it("accepts HTTP OAuth options and rejects invalid ports", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "pi-mcp-config-"));
+
+    try {
+      const entry = {
+        type: "http",
+        url: "https://mcp.example.com/mcp",
+        oauth: { clientId: "public-client", port: 8765 },
+      };
+
+      expect(await loadConfig(cwd, JSON.stringify({ remote: entry }))).toMatchObject({
+        remote: entry,
+      });
+      expect(
+        await loadConfig(cwd, JSON.stringify({ remote: { ...entry, oauth: { port: 0 } } })),
+      ).toEqual({});
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("keeps a flat server named servers", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "pi-mcp-config-"));
     const entry = { command: "flat", args: [] };

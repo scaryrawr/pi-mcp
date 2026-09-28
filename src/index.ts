@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { closeMcps, connectMcp } from "./mcp-clients.js";
 import { loadMcpConfig, parseMcpRegistration } from "./mcp-config.js";
+import { loginMcp } from "./mcp-oauth.js";
 import { publishMcpTools } from "./mcp-tool-discovery.js";
 import type { McpConnection, McpEntry } from "./mcp-types.js";
 import { COLLECT_MCP_SERVERS, REGISTER_MCP_SERVER } from "./register.js";
@@ -13,6 +14,7 @@ import { COLLECT_MCP_SERVERS, REGISTER_MCP_SERVER } from "./register.js";
 export default function (pi: ExtensionAPI): void {
   const registrations = new Map<string, McpEntry>();
   const connections = new Map<string, McpConnection>();
+  let configured = new Map<string, McpEntry>();
   let cwd: string | undefined;
   let pending: Promise<void> = Promise.resolve();
 
@@ -41,6 +43,7 @@ export default function (pi: ExtensionAPI): void {
     registrations.set(name, entry);
 
     if (cwd) {
+      configured.set(name, entry);
       const sessionCwd = cwd;
       pending = pending.then(() => addServer(name, entry, sessionCwd));
     }
@@ -55,6 +58,7 @@ export default function (pi: ExtensionAPI): void {
       const config = await loadMcpConfig(pi, ctx);
 
       for (const [name, entry] of registrations) config[name] = entry;
+      configured = new Map(Object.entries(config));
       await Promise.all(
         Object.entries(config).map(([name, entry]) => addServer(name, entry, ctx.cwd)),
       );
@@ -67,6 +71,44 @@ export default function (pi: ExtensionAPI): void {
     await pending;
     await closeMcps([...connections.values()]);
     connections.clear();
+    configured.clear();
+  });
+
+  pi.registerCommand("mcp-login", {
+    description: "Authorize a configured HTTP MCP server (usage: /mcp-login server-name)",
+    handler: async (args, ctx) => {
+      const name = args.trim();
+      const entry = configured.get(name);
+
+      if (!entry || entry.type !== "http" || !entry.oauth) {
+        ctx.ui.notify(`No OAuth HTTP MCP server named '${name}'.`, "error");
+
+        return;
+      }
+
+      if (connections.has(name)) {
+        ctx.ui.notify(
+          `${name} is already connected; restart the session to replace it.`,
+          "warning",
+        );
+
+        return;
+      }
+
+      try {
+        await loginMcp(name, entry, ctx);
+        await addServer(name, entry, ctx.cwd);
+        ctx.ui.notify(
+          connections.has(name) ? `${name} connected` : `${name} authorized, but connection failed`,
+          connections.has(name) ? "info" : "error",
+        );
+      } catch (error) {
+        ctx.ui.notify(
+          `OAuth login failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+        );
+      }
+    },
   });
 
   pi.registerFlag("mcp", {

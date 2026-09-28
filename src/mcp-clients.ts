@@ -2,9 +2,11 @@ import {
   Client,
   StreamableHTTPClientTransport,
   type Transport,
+  type StreamableHTTPClientTransportOptions,
 } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
+import { McpOAuthProvider } from "./mcp-oauth.js";
 import type { McpConnection, McpEntry } from "./mcp-types.js";
 
 /**
@@ -20,10 +22,23 @@ export async function connectMcp(
   let transport: Transport;
 
   if (entry.type === "http") {
-    transport = new StreamableHTTPClientTransport(
-      new URL(entry.url),
-      entry.headers ? { requestInit: { headers: entry.headers } } : {},
-    );
+    const provider = entry.oauth
+      ? await McpOAuthProvider.create(
+          name,
+          entry,
+          `http://127.0.0.1:${entry.oauth.port ?? 8765}/callback`,
+        )
+      : undefined;
+
+    if (provider && !provider.hasTokens()) return undefined;
+
+    const options: StreamableHTTPClientTransportOptions = {};
+
+    if (entry.headers) options.requestInit = { headers: entry.headers };
+
+    if (provider) options.authProvider = provider;
+
+    transport = new StreamableHTTPClientTransport(new URL(entry.url), options);
   } else {
     transport = new StdioClientTransport({
       ...entry,

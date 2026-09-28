@@ -55,7 +55,23 @@ Server entries can be supplied as a flat map (as above), or nested under a top-l
 Each server entry supports:
 
 - **Local (stdio)**: `command`, `args`, optional `env` and `tools` filter
-- **HTTP**: `type: "http"`, `url`, optional `headers` and `tools` filter (uses Streamable HTTP; headers are sent with transport requests)
+- **HTTP**: `type: "http"`, `url`, optional `headers`, `oauth`, and `tools` filter (uses Streamable HTTP; headers are sent with transport requests)
+
+### HTTP OAuth
+
+For an OAuth-protected remote server, enable `oauth` and run `/mcp-login <server-name>` in an interactive pi session. Login uses the SDK's authorization-code flow with PKCE, a loopback callback at `http://127.0.0.1:8765/callback`, and server-advertised discovery and dynamic client registration. The login command opens a browser when available and also prints the authorization URL. Connections without saved tokens are skipped until you log in; login connects and publishes the server's tools in the current session. Existing bearer-token `headers` configuration remains supported without OAuth.
+
+```json
+{
+  "remote": {
+    "type": "http",
+    "url": "https://mcp.example.com/mcp",
+    "oauth": {}
+  }
+}
+```
+
+If the authorization server does not support dynamic registration, set `oauth.clientId` to a **public** pre-registered client ID. Alternatively, for servers supporting Client ID Metadata Documents, set `oauth.clientMetadataUrl` to a public HTTPS document hosted by you. Its redirect URI must match the loopback callback; if necessary, set `oauth.port` to a fixed port (1–65535, default 8765) and register `http://127.0.0.1:<port>/callback`. Do not put a shared client secret in project configuration. OAuth credentials (including refresh tokens) are saved under the pi agent directory's `mcp-oauth/` with owner-only file permissions; do not commit or share that directory. Each server name and URL gets separate credentials. Non-interactive modes can use existing credentials but cannot run login.
 
 The extension uses the v2 `@modelcontextprotocol/client` SDK. It does not require the v1 `@modelcontextprotocol/sdk` package or a direct Zod dependency.
 
