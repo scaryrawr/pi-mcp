@@ -20,7 +20,10 @@ export async function connectMcp(
   let transport: Transport;
 
   if (entry.type === "http") {
-    transport = new StreamableHTTPClientTransport(new URL(entry.url));
+    transport = new StreamableHTTPClientTransport(
+      new URL(entry.url),
+      entry.headers ? { requestInit: { headers: entry.headers } } : {},
+    );
   } else {
     transport = new StdioClientTransport({
       ...entry,
@@ -35,6 +38,12 @@ export async function connectMcp(
 
     return { name, client, entry, transport };
   } catch {
+    try {
+      await client.close();
+    } catch {
+      // A failed handshake must not prevent the other servers from connecting.
+    }
+
     return undefined;
   }
 }
@@ -42,7 +51,15 @@ export async function connectMcp(
 /** Closes MCP connections without preventing extension shutdown. */
 export async function closeMcps(connections: McpConnection[]): Promise<void> {
   await Promise.all(
-    connections.map(async ({ client }) => {
+    connections.map(async ({ client, transport }) => {
+      try {
+        if (transport instanceof StreamableHTTPClientTransport) {
+          await transport.terminateSession();
+        }
+      } catch {
+        // Still close the transport if the server cannot terminate the session.
+      }
+
       try {
         await client.close();
       } catch {
