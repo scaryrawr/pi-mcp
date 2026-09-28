@@ -1,4 +1,4 @@
-import type { Client, Tool, Transport } from "@modelcontextprotocol/client";
+import type { Client, Transport } from "@modelcontextprotocol/client";
 
 /** Configuration for an MCP server launched as a local process. */
 export type LocalMcpEntry = {
@@ -42,10 +42,4 @@ export type McpConnection = {
   entry: McpEntry;
   /** Transport owned by the client. */
   transport: Transport;
-};
-
-/** An MCP tool paired with the connection that serves it. */
-export type DiscoveredTool = {
-  connection: McpConnection;
-  tool: Tool;
 };

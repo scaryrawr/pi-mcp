@@ -14,11 +14,9 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@cfworker/json-schema": "^4.1.1",
-    "@modelcontextprotocol/client": "^2.0.0-alpha.2",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "typebox": "^1.1.37",
-    "zod": "^4.6.5"
+    "@modelcontextprotocol/client": "^2.0.0",
+    "pi-dynamic-tools": "github:scaryrawr/pi-dynamic-tools",
+    "typebox": "^1.1.37"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "^0.86.1",
@@ -30,6 +28,9 @@
     "oxlint-tsgolint": "7.0.2002",
     "vitest": "^4.1.10"
   },
+  "bundledDependencies": [
+    "pi-dynamic-tools"
+  ],
   "pi": {
     "extensions": [
       "./src/index.ts"
