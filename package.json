@@ -22,8 +22,8 @@
     "typebox": "^1.1.37"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "^0.86.1",
-    "@earendil-works/pi-coding-agent": "^0.86.1",
+    "@earendil-works/pi-ai": "^0.87.1",
+    "@earendil-works/pi-coding-agent": "^0.87.1",
     "@oxlint/plugins": "1.83.0",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "oxfmt": "^0.47.0",
