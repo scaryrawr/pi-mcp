@@ -1,5 +1,24 @@
 # pi-mcp
 
+> **Retired for Pi 0.99.1+.** Pi now provides MCP stdio/HTTP connections, OAuth,
+> server management, resource access, and deferred tool discovery. Remove this
+> extension from Pi settings; keep this repository only for older Pi versions.
+> Use global `~/.pi/agent/mcp.json` or trusted project `.pi/mcp.json` with a
+> top-level `mcpServers` object, and `exposure: "deferred"` for on-demand search.
+> Use `/mcp`, `pi mcp list`, and `pi mcp login <server>`; extension authors should
+> call `pi.registerMcpServer(name, config)` directly. Portable Agent Plugins MCP
+> adaptation now lives in `pi-agent-plugins`, with no transport dependency here.
+>
+> Migration is not automatic: flat/`servers` maps must be wrapped in
+> `mcpServers`; cwd-level `mcp.json`/`.mcp.json`, `PI_MCP_CONFIG_DIRS`, and `--mcp`
+> must move to the supported config locations. Replace `tools` filters with
+> `exposure`/`toolExposure` (use `hidden` plus explicit allowlisted overrides).
+> Built-in tools are named `mcp__<server>__<tool>` and discovered with
+> `tool_search`, not `search_tools`. Legacy `mcp-oauth/` tokens are not imported;
+> sign in again. Pi file entries take precedence over extension registrations.
+>
+> The remainder documents the **legacy extension**, not built-in Pi support.
+
 An MCP client extension for [pi](https://github.com/mariozechner/pi-coding-agent) that connects to Model Context Protocol (MCP) servers and publishes their tools to [pi-dynamic-tools](https://github.com/scaryrawr/pi-dynamic-tools) for on-demand activation.
 
 ## What it does
