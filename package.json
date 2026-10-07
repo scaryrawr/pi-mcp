@@ -18,18 +18,23 @@
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
-    "pi-dynamic-tools": "github:scaryrawr/pi-dynamic-tools",
-    "typebox": "^1.1.37"
+    "pi-dynamic-tools": "github:scaryrawr/pi-dynamic-tools"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "^0.87.1",
-    "@earendil-works/pi-coding-agent": "^0.87.1",
+    "@earendil-works/pi-ai": "^0.99.1",
+    "@earendil-works/pi-coding-agent": "^0.99.1",
     "@oxlint/plugins": "1.83.0",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "oxfmt": "^0.47.0",
     "oxlint": "1.83.0",
     "oxlint-tsgolint": "7.0.2002",
+    "typebox": "^1.1.37",
     "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
   },
   "bundledDependencies": [
     "pi-dynamic-tools"

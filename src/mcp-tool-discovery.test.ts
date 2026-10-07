@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 
 import type {
   ExtensionAPI,
-  ExtensionContext,
+  ExtensionToolContext,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { Tool } from "@modelcontextprotocol/client";
@@ -144,7 +144,7 @@ describe("MCP tool publication", () => {
 
       if (!tool) throw new Error("Expected a published tool");
       // SAFETY: This tool does not use the extension context.
-      const ctx = {} as ExtensionContext;
+      const ctx = {} as ExtensionToolContext;
       const result = await tool.execute("id", { key: "abc" }, undefined, undefined, ctx);
       expect(result).toMatchObject({
         content: [{ type: "text", text: "found" }],
